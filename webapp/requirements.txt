@@ -1,6 +1,9 @@
-flask
+Flask
 torch
 torchvision
-pillow
-opencv-python
+Pillow
+numpy
+matplotlib
+opencv-python-headless
 albumentations
+gunicorn

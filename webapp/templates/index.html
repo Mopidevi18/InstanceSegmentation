@@ -45,18 +45,15 @@
       </div>
     </div>
 
-    {% if orig_file and pred_file %}
+    {% if orig_image and pred_image %}
     <div class="row result-row gx-4">
       <!-- Original Image -->
       <div class="col-md-6">
         <div class="card result-card shadow-sm">
           <div class="card-body text-center">
             <h5 class="card-title">Original</h5>
-            <img
-              src="{{ url_for('static', filename='uploads/' ~ orig_file) }}"
-              class="img-fluid rounded"
-              alt="Original Image"
-            >
+            <img src="data:image/png;base64,{{ orig_image }}"
+            class="img-fluid rounded" alt="Original">
           </div>
         </div>
       </div>
@@ -65,15 +62,15 @@
         <div class="card result-card shadow-sm">
           <div class="card-body text-center">
             <h5 class="card-title">Inference Result</h5>
-            <img
-              src="{{ url_for('static', filename='results/' ~ pred_file) }}"
-              class="img-fluid rounded"
-              alt="Mask-R-CNN Prediction"
-            >
+            <img src="data:image/png;base64,{{ pred_image }}"
+            class="img-fluid rounded" alt="Prediction">
           </div>
         </div>
       </div>
     </div>
+    <script>
+        window.history.replaceState(null, null, window.location.pathname);
+    </script>
     {% endif %}
 
     <!-- Bootstrap JS -->
