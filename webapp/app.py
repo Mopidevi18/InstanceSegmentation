@@ -5,6 +5,8 @@ import json
 
 import cv2
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import io
@@ -132,51 +134,30 @@ model        = get_model(len(category_map)+1, WEIGHTS_PATH)
 
 @app.route("/", methods=["GET","POST"])
 def index():
+    orig_b64 = pred_b64 = None
+
     if request.method == "POST":
         f = request.files.get("image")
         if f:
-            # read all bytes up-front
+            # --- read raw upload & inline it ---
             raw = f.read()
+            orig_b64 = base64.b64encode(raw).decode("utf-8")
 
-            # 1) save the original upload
-            orig_name = f"{uuid.uuid4().hex}.png"
-            orig_folder = os.path.join(app.static_folder, "uploads")
-            os.makedirs(orig_folder, exist_ok=True)
-            orig_path = os.path.join(orig_folder, orig_name)
-            with open(orig_path, "wb") as out:
-                out.write(raw)
-
-            # 2) run inference on that same bytes buffer
-            img = Image.open(io.BytesIO(raw)).convert("RGB")
+            # --- run inference ---
+            img   = Image.open(io.BytesIO(raw)).convert("RGB")
             img_t = to_tensor(img)
             with torch.no_grad():
                 out = model([img_t])[0]
 
-            # 3) build your Matplotlib‐style PNG bytes
-            png = generate_vis_bytes(img, out, category_map)
+            # --- build your PNG bytes via matplotlib overlay ---
+            png_bytes = generate_vis_bytes(img, out, category_map)
+            pred_b64  = base64.b64encode(png_bytes).decode("utf-8")
 
-            # 4) save it to disk under static/results
-            pred_name = f"{uuid.uuid4().hex}.png"
-            pred_folder = os.path.join(app.static_folder, "results")
-            os.makedirs(pred_folder, exist_ok=True)
-            pred_path = os.path.join(pred_folder, pred_name)
-            with open(pred_path, "wb") as out:
-                out.write(png)
-
-            # 5) stash JUST the filenames in session
-            session["orig_file"] = orig_name
-            session["pred_file"] = pred_name
-
-        # redirect to GET so the browser URL stays clean
-        return redirect(url_for("index"))
-
-    # GET: pull each out exactly once so that a browser refresh
-    # clears them and you see only the upload form again.
-    orig = session.pop("orig_file", None)
-    pred = session.pop("pred_file", None)
+    # on GET *or* after POST, render page; if POST we’ll have two b64 strings
     return render_template("index.html",
-                           orig_file=orig,
-                           pred_file=pred)
+                           orig_image=orig_b64,
+                           pred_image=pred_b64)
 
 if __name__ == "__main__":
     app.run(debug=True)
+
