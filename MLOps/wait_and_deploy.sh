@@ -26,7 +26,7 @@ while true; do
     echo "Training job failed or cancelled!"
     exit 1
   fi
-  sleep 30  # Check every 30 seconds
+  sleep 60  # Check every 30 seconds
 done
 
 # Proceed to deploy webapp
