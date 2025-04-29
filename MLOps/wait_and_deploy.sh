@@ -35,5 +35,6 @@ gcloud run deploy segwaste-webapp \
   --image "us-central1-docker.pkg.dev/instancesegmentation-456922/segwaste-webapp/segwaste" \
   --region "$REGION" \
   --platform managed \
-  --memory 2Gi \
+  --memory 8Gi \
+  --cpu 2 \
   --allow-unauthenticated
