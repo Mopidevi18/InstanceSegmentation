@@ -1,6 +1,22 @@
 logsBucket: gs://cloud-build-logs-segwaste
 
 steps:
+  # Step 1: Rebuild training image with latest train.py
+  - name: "gcr.io/cloud-builders/docker"
+    args: [
+      "build", "-t",
+      "us-central1-docker.pkg.dev/instancesegmentation-456922/training-repo/train:latest",
+      "-f", "Dockerfile.train", "."
+    ]
+    dir: MLOps
+
+  - name: "gcr.io/cloud-builders/docker"
+    args: [
+      "push",
+      "us-central1-docker.pkg.dev/instancesegmentation-456922/training-repo/train:latest"
+    ]
+
+  # 2. Launch training and wait until it finishes
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: "bash"
     args:
@@ -9,4 +25,17 @@ steps:
         gcloud ai custom-jobs create \
           --region=us-central1 \
           --display-name="maskrcnn-training-job" \
-          --config=MLOps/custom-job.yaml
+          --config=MLOps/custom-job.yaml \
+          --sync
+
+  # 3. Deploy webapp AFTER training successfully finishes
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    args:
+      [
+        "run", "deploy", "segwaste-webapp",
+        "--image", "us-central1-docker.pkg.dev/instancesegmentation-456922/segwaste-webapp/segwaste",
+        "--region", "us-central1",
+        "--platform", "managed",
+        "--memory", "2Gi",
+        "--allow-unauthenticated"
+      ]

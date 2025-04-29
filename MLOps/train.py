@@ -9,7 +9,7 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from torch.cuda.amp import autocast, GradScaler
-
+from google.cloud import storage
 import numpy as np
 
 from torchvision.models.detection import maskrcnn_resnet50_fpn
@@ -260,6 +260,16 @@ def train_one_epoch(model, opt, loader, device, print_every=50):
             print(f"  [batch {i:4d}/{len(loader)}] loss={loss.item():.4f}")
     return total_loss / len(loader)
 
+from google.cloud import storage
+
+def upload_blob(bucket_name, source_file_name, destination_blob_name):
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+    blob.upload_from_filename(source_file_name)
+    print(f"✅ Uploaded {source_file_name} to gs://{bucket_name}/{destination_blob_name}")
+
+
 def main():
     args = parse_args()
     os.makedirs(args.output_dir, exist_ok=True)
@@ -306,8 +316,8 @@ def main():
     final_path = os.path.join(args.output_dir, "best_model.pth")
     torch.save(model.state_dict(), final_path)
     print(f"✔ Saved final model to {final_path}")
-    os.system("gsutil cp /workspace/data/outputs/best_model.pth gs://tacodataset/checkpoints/")
-    print("☁️ Uploaded best model to GCS: gs://tacodataset/checkpoints/best_model.pth")
+    # Usage
+    upload_blob("tacodataset", "/workspace/data/outputs/best_model.pth", "checkpoints/best_model.pth")
 
 if __name__ == "__main__":
     main()
