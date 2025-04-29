@@ -1,0 +1,10 @@
+steps:
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        gcloud ai custom-jobs create \
+          --region=us-central1 \
+          --display-name="maskrcnn-training-job" \
+          --config=MLOps/custom-job.yaml
