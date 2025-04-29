@@ -5,3 +5,4 @@ Pillow>=8.0.0
 pycocotools>=2.0.6
 albumentations>=1.0.3
 Cython>=0.29.21
+google-cloud-storage>=2.0.0
