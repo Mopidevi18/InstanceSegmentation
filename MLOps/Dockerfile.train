@@ -1,0 +1,61 @@
+# FROM python:3.9-slim
+FROM pytorch/pytorch:latest
+
+# Install Python 3.9, pip, and basic tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.9 \
+    python3-distutils \
+    python3-pip \
+    curl \
+    ca-certificates \
+    gnupg \
+    gcc \
+    g++ \
+ && rm -rf /var/lib/apt/lists/*
+
+# Symlink python and pip only if they don't already exist
+RUN ln -sf /usr/bin/python3.9 /usr/bin/python && ln -sf /usr/bin/pip3 /usr/bin/pip
+
+# — add the official Google Cloud SDK apt repo and install it —
+RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] \
+      http://packages.cloud.google.com/apt cloud-sdk main" \
+      | tee /etc/apt/sources.list.d/google-cloud-sdk.list \
+ && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg \
+      | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add - \
+ && apt-get update && apt-get install -y --no-install-recommends \
+      google-cloud-sdk \
+    && rm -rf /var/lib/apt/lists/*
+
+# create a workspace where we’ll stage the data
+RUN mkdir -p /workspace/data
+
+WORKDIR /app
+
+# — copy & install Python requirements —
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# — copy your training script —
+COPY train.py .
+
+# — default entrypoint: pull data from GCS and run train.py —
+ENTRYPOINT ["/bin/bash", "-c", "\
+    set -euo pipefail; \
+    echo '>> Downloading data from GCS…'; \
+    gsutil -m cp -r gs://tacodataset/data/* /workspace/data; \
+    echo '>> Data staged under /workspace/data'; \
+    if gsutil ls gs://tacodataset/checkpoints/best_model.pth; then \
+      echo '>> Found previous checkpoint, downloading...'; \
+      gsutil cp gs://tacodataset/checkpoints/best_model.pth /workspace/data/best_model.pth; \
+    else \
+      echo '>> No checkpoint found, starting fresh.'; \
+    fi; \
+    echo '>> Launching training…'; \
+    python train.py \
+      --images-dir /workspace/data/ \
+      --train-annotations /workspace/data/annotations_train.json \
+      --val-annotations   /workspace/data/annotations_val.json \
+      --output-dir /workspace/data/outputs \
+      --resume_from /workspace/data/best_model.pth \
+      \"$@\" \
+"]
