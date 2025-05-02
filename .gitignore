@@ -1,3 +1,6 @@
+.ipynb_checkpoints/
+*.Zone.Identifier
+*.zip
 InstanceSegmentation.git/
 data/
 InstanceSegmentation/

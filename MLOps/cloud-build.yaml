@@ -1,0 +1,23 @@
+timeout: 7200s
+
+logsBucket: gs://cloud-build-logs-segwaste
+
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args: [
+      "build", "-t",
+      "us-central1-docker.pkg.dev/instancesegmentation-456922/training-repo/train:latest",
+      "-f", "Dockerfile.train", "."
+    ]
+    dir: MLOps
+
+  - name: "gcr.io/cloud-builders/docker"
+    args: [
+      "push",
+      "us-central1-docker.pkg.dev/instancesegmentation-456922/training-repo/train:latest"
+    ]
+
+  # Wait for job completion and deploy webapp
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "bash"
+    args: ["MLOps/wait_and_deploy.sh"]
