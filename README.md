@@ -1,7 +1,7 @@
 
 # Instance Segmentation for Waste Classification
 
-This project implements an instance segmentation model designed for waste classification using the Mask R-CNN architecture with a ResNet-50 backbone. The model is trained on a curated subset of the TACO dataset, classifying waste into three categories: **plastic**, **landfill**, and **organic**. It includes full data processing, model training, evaluation, MLOps pipeline, and a web app for real-time inference.
+This project implements a fine-tuned Mask R-CNN model with a ResNet-50 backbone for instance segmentation, tailored for real-world waste classification. Leveraging the TACO (Trash Annotations in Context) dataset—which provides annotations for over 59 distinct waste-related categories—the model is trained and optimized to detect and segment various types of waste under diverse environmental conditions. The project encompasses complete data preprocessing, training with fine-tuned hyperparameters, thorough evaluation using segmentation metrics, and a production-ready MLOps pipeline with a real-time web application for interactive inference.
 
 ---
 
@@ -21,23 +21,23 @@ This project implements an instance segmentation model designed for waste classi
 
 ## Overview
 
-The goal is to build a robust segmentation model that identifies and classifies waste in diverse real-world scenes. The project combines modern deep learning methods with practical deployment tools to create a scalable and efficient solution for automated waste management.
+The goal of this project is to develop a robust instance segmentation model capable of accurately identifying and classifying waste in diverse, real-world environments. By combining state-of-the-art deep learning techniques with a scalable deployment pipeline, the system provides an efficient and practical solution for automated waste monitoring and smart waste management.
 
 ---
 
 ## Dataset
 
-- **Source:** [TACO Dataset](https://tacodataset.org/)
-- **Selected Classes:** Plastic, Landfill, Organic
+- **Source:** [TACO Dataset](http://tacodataset.org/)
+- **Target Classes**: Plastic, Landfill, Organic (subset selected from 59 annotated categories)
 
 ### Preprocessing Steps:
-- Removed masks smaller than **4×4 pixels**
-- Filtered out low-visibility objects (bounding box visibility < 30%)
+- Discarded segmentation masks smaller than 4×4 pixels to remove noisy annotations.
+- Filtered out objects with bounding box visibility below 30% to ensure data quality.
 
 ### Augmentations:
 - Applied using **Albumentations**
-  - Geometric: flips, rotations, scaling, affine
-  - Photometric: brightness, contrast, gamma, hue/saturation
+  - Geometric transforms: horizontal/vertical flips, random rotations, scaling.
+  - Photometric transforms: brightness/contrast adjustment, hue/saturation shifts.
 
 ---
 
@@ -46,7 +46,14 @@ The goal is to build a robust segmentation model that identifies and classifies 
 - **Base Model:** Mask R-CNN with ResNet-50 + FPN  
 - **Library:** PyTorch (`torchvision.models.detection`)
 - **Customizations:**
-  - Classification and mask heads adapted to 3 classes
+  - Fine-tuned for the waste classification task using a subset of the TACO dataset.
+  - Model Workflow:
+    - 1) Region Proposal Network (RPN): Generates candidate object regions.
+    - 2) ROIAlign: Extracts aligned feature maps for each proposed region.
+    - 3) Task-specific heads:
+         - Bounding Box Head: Refines the spatial coordinates of each object.
+         - Classification Head: Predicts the waste type (Plastic, Landfill, Organic).
+         - Mask Head: Produces a binary segmentation mask for each detected object.
 
 ---
 
@@ -75,16 +82,24 @@ The goal is to build a robust segmentation model that identifies and classifies 
 - **Mean Average Precision (mAP)** from IoU 0.5 to 0.95 (step 0.05)
 
 **Insight:**  
-Best results were achieved at the **0.5 IoU** threshold. Performance dropped at higher thresholds due to minor mask misalignments.
+The evaluation was conducted using a 0.5 IoU threshold, which provided the most stable and reliable performance results. The model achieved strong segmentation accuracy and classification consistency, especially on clearly visible and well-separated waste items.
 
 ---
 
 ## MLOps Pipeline
 
-- **Version Control:** GitHub  
-- **CI/CD:** Cloud Build triggers for automated testing and deployment  
-- **Model Registry:** Version tracking and evaluation metadata  
-- **Deployment:** Containerized deployment pipeline from training to production
+- **Version Control:** Managed through GitHub for collaborative development and tracking.
+
+- **Training Jobs:** Executed on Vertex AI Custom Jobs using T4 GPU instances.
+
+- **CI/CD:** Automated with Cloud Build triggers for model training and app deployment.
+
+- **Containerization:** Model and web app containerized using Docker for consistent builds and deployment.
+
+- **Model Storage:** Best-performing model (based on validation mIoU) is saved automatically to Google Cloud Storage for versioning and reuse.
+
+- **Deployment:** The containerized model is deployed using Cloud Run for scalable, serverless inference.
+
 
 ---
 
@@ -92,10 +107,12 @@ Best results were achieved at the **0.5 IoU** threshold. Performance dropped at 
 
 - **Framework:** Flask  
 - **Features:**
-  - Upload image and view predictions
-  - Live inference with segmentation mask and class labels
-- **Deployment:** Dockerized for portability and cloud readiness
-
+  - Upload images through a user-friendly interface
+  - Run real-time inference using the trained segmentation model
+  - Visualize instance masks with class labels overlayed on the image
+- **Model Loading:** Downloads the best-performing model from Google Cloud Storage at startup for inference
+- **Deployment:** Dockerized for consistent local development and deployed via Cloud Run for scalable, serverless access
+  
 ---
 
 ## Results
