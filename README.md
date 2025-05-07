@@ -48,9 +48,9 @@ The goal of this project is to develop a robust instance segmentation model capa
 - **Customizations:**
   - Fine-tuned for the waste classification task using a subset of the TACO dataset.
   - Model Workflow:
-    - 1) Region Proposal Network (RPN): Generates candidate object regions.
-    - 2) ROIAlign: Extracts aligned feature maps for each proposed region.
-    - 3) Task-specific heads:
+    -  Region Proposal Network (RPN): Generates candidate object regions.
+    -  ROIAlign: Extracts aligned feature maps for each proposed region.
+    -  Task-specific heads:
          - Bounding Box Head: Refines the spatial coordinates of each object.
          - Classification Head: Predicts the waste type (Plastic, Landfill, Organic).
          - Mask Head: Produces a binary segmentation mask for each detected object.
