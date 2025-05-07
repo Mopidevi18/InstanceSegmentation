@@ -1,143 +1,133 @@
 Instance Segmentation for Waste Classification
-This project focuses on developing an instance segmentation model tailored for waste classification tasks. Leveraging the Mask R-CNN architecture with a ResNet-50 backbone, the model is fine-tuned on a curated subset of the TACO dataset, targeting three primary waste categories: plastic, landfill, and organic. The project encompasses data preprocessing, model training, evaluation, deployment via an MLOps pipeline, and a web application for real-time inference.
 
-Table of Contents
-Overview
+This project focuses on developing an instance segmentation model tailored for waste classification tasks. Leveraging the Mask R-CNN architecture with a ResNet-50 backbone, the model is fine-tuned on a curated subset of the TACO dataset, targeting three primary waste categories: plastic, landfill, and organic. The pipeline includes data preprocessing, model training, evaluation, deployment via an MLOps pipeline, and a web application for real-time inference.
 
-Dataset
+✨ Overview
 
-Model Architecture
+The primary objective is to create a robust instance segmentation model capable of accurately identifying and classifying waste materials in real-world scenarios. By integrating advanced deep learning techniques with scalable deployment practices, this project supports efficient and sustainable waste management solutions.
 
-Training Setup
+📄 Dataset
 
-Evaluation Metrics
+Source: TACO Dataset
 
-MLOps Pipeline
+Selected Categories: Plastic, Landfill, Organic
 
-Web Application
+Preprocessing Steps:
 
-Results
+Removed instances with segmentation masks < 4×4 pixels
 
-Conclusion
+Excluded objects with <30% bounding box visibility
 
+Applied geometric and photometric augmentations using the Albumentations library
 
-Overview
-The primary objective is to create a robust instance segmentation model capable of accurately identifying and classifying waste materials in real-world scenarios. By integrating advanced deep learning techniques with streamlined deployment processes, this project aims to facilitate efficient waste management solutions.
+💡 Model Architecture
 
-Dataset
-Source: TACO (Trash Annotations in Context) dataset.
+Base Model: Mask R-CNN with ResNet-50 + Feature Pyramid Network (FPN)
 
-Selected Categories: Plastic, Landfill, Organic.
+Customization: Reinitialized classification and mask heads for 3 waste classes
 
-Preprocessing:
+Implementation: Built using PyTorch's torchvision library
 
-Removed instances with segmentation masks smaller than 4×4 pixels.
+📊 Training Setup
 
-Excluded objects with bounding box visibility below 30%.
+Input Size: 512×512 px
 
-Augmentation: Applied geometric and photometric transformations using the Albumentations library to enhance model generalization.
+Optimizer: SGD (momentum=0.9)
 
-Model Architecture
-Base Model: Mask R-CNN with ResNet-50 backbone and Feature Pyramid Network (FPN).
+Learning Rate Scheduler: OneCycleLR with cosine annealing (max LR: 5e-3)
 
-Modifications:
+Losses: Classification + Bounding Box Regression + Binary Mask Loss
 
-Reinitialized classification and mask heads to accommodate the three target waste categories.
+Epochs: 60
 
-Implementation: Utilized PyTorch's torchvision library for model development.
+Batch Size: 4
 
-Training Setup
-Input Size: 512×512 pixels.
+Regularization: Weight decay = 5e-4
 
-Optimizer: Stochastic Gradient Descent (SGD) with momentum of 0.9.
+Hardware: Trained on NVIDIA T4 GPU via Vertex AI
 
-Learning Rate Scheduler: OneCycleLR with cosine annealing; max LR = 5e-3.
+🔢 Evaluation Metrics
 
-Loss Functions: Combined classification loss, bounding box regression loss, and binary mask loss.
+1. Fixed IoU Threshold (0.5):
 
-Epochs: 60.
+Precision, Recall, mIoU, Class Accuracy
 
-Batch Size: 4.
+2. COCO-style Evaluation:
 
-Regularization: Weight decay of 5e-4.
-
-Hardware: Training conducted on NVIDIA T4 GPU via Vertex AI Custom Job.
-ResearchGate
-+1
-Semarak Ilmu
-+1
-
-Evaluation Metrics
-Fixed IoU Threshold (0.5):
-
-Precision, Recall, mean Intersection over Union (mIoU), Class Accuracy.
-
-COCO-style Evaluation:
-
-Mean Average Precision (mAP) computed across IoU thresholds from 0.5 to 0.95 in increments of 0.05.
+mAP computed across thresholds (0.5 to 0.95 @ step 0.05)
 
 Observations:
 
-Stable and higher-scoring results at 0.5 IoU threshold.
+Best performance at IoU=0.5
 
-Performance declined at stricter thresholds (e.g., 0.85+), indicating minor boundary misalignments.
+Decreased performance at higher thresholds due to minor boundary misalignments
 
-MLOps Pipeline
-Version Control: GitHub for codebase management.
+🚀 MLOps Pipeline
 
-CI/CD: Integrated Cloud Build triggers for automated testing and deployment.
+Version Control: GitHub
 
-Model Registry: Implemented for versioning and tracking model performance.
+CI/CD: Cloud Build for automated testing and deployment
 
-Deployment: Streamlined process for transitioning models from development to production environments.
-Microsoft Learn
-Medium
-+1
-GitHub
-+1
+Model Registry: Tracks model versions and evaluation metrics
 
-Web Application
-Framework: Flask.
+Deployment: Vertex AI & Docker for development-to-production transition
 
-Functionality:
+🚪 Web Application
 
-User-friendly interface for uploading images.
+Framework: Flask
 
-Real-time instance segmentation and waste classification.
+Features:
 
-Visualization of segmentation masks and class labels.
+Upload images for real-time segmentation
 
-Deployment: Containerized using Docker for scalability and ease of deployment.
-Harness.io
-GitHub
-+1
-Microsoft Learn
-+1
+Display predictions with masks and confidence scores
 
-Results
+Deployment: Docker container for scalability
+
+📊 Results
+
 Training Metrics:
 
-mIoU: 0.827.
+mIoU: 0.827
 
-Class Accuracy: 0.820.
+Class Accuracy: 0.820
 
 Validation Metrics:
 
-mIoU: 0.818.
+mIoU: 0.818
 
-Class Accuracy: 0.653.
+Class Accuracy: 0.653
 
-Training Duration: Approximately 7 hours for 60 epochs (~1 hour 10 minutes per 10 epochs) on NVIDIA T4 GPU.
+Training Duration: ~7 hours for 60 epochs (~1h 10min per 10 epochs)
 
-Insights:
+Visual Examples:
 
-High performance on well-separated and clearly visible objects.
+Original
 
-Challenges observed in complex backgrounds and overlapping waste materials.
-GitHub
-
-Conclusion
-This project successfully demonstrates the development and deployment of an instance segmentation model tailored for waste classification. By fine-tuning Mask R-CNN on a curated dataset and integrating an efficient MLOps pipeline, the model achieves high accuracy and robustness in diverse environments. The accompanying web application further enhances accessibility, allowing for real-time waste detection and classification.
+Inference Result
 
 
+
+
+
+
+Key Insights:
+
+High accuracy for clearly visible waste
+
+Challenges in cluttered scenes or overlapping materials
+
+🔹 Conclusion
+
+This project demonstrates the effectiveness of fine-tuning a Mask R-CNN model for instance segmentation in waste classification. With strong training/validation results and a complete MLOps deployment pipeline, the system offers practical potential for smart cities and environmental monitoring. The interactive web application ensures user-friendly, real-time access to the model.
+
+🔗 References
+
+TACO Dataset
+
+Mask R-CNN Paper
+
+PyTorch torchvision
+
+Albumentations
 
