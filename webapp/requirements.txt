@@ -1,7 +1,9 @@
-Flask
-torch
-torchvision
+Flask>=2.2
+Flask-Session
+torch>=2.0
+torchvision>=0.15
 Pillow
+google-cloud-storage
 numpy
 matplotlib
 opencv-python-headless

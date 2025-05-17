@@ -18,5 +18,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . /app
 WORKDIR /app
 
+# ensure /app/model/ exists for downloaded weights
+RUN mkdir -p /app/model
+
 # run via gunicorn
 CMD exec gunicorn --bind :$PORT app:app
