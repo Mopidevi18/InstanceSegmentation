@@ -4,7 +4,8 @@
 import os
 import argparse
 from datetime import datetime
-
+from torch import nn
+from torchvision.ops import nms
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
@@ -270,6 +271,32 @@ def upload_blob(bucket_name, source_file_name, destination_blob_name):
     print(f"✅ Uploaded {source_file_name} to gs://{bucket_name}/{destination_blob_name}")
 
 
+
+
+class JITWrapper(nn.Module):
+    def __init__(self, model, score_thresh=0.5, nms_thresh=0.5):
+        super().__init__()
+        self.model = model
+        self.score_thresh = score_thresh
+        self.nms_thresh = nms_thresh
+
+    def forward(self, img):
+        _, dets = self.model([img], None)
+        result = dets[0]
+
+        boxes, scores, labels, masks = (
+            result["boxes"], result["scores"],
+            result["labels"], result["masks"]
+        )
+
+        keep = scores > self.score_thresh
+        boxes = boxes[keep]; scores = scores[keep]
+        labels = labels[keep]; masks = masks[keep]
+
+        keep2 = nms(boxes, scores, self.nms_thresh)
+        return boxes[keep2], labels[keep2], scores[keep2], masks[keep2]
+
+
 def main():
     args = parse_args()
     os.makedirs(args.output_dir, exist_ok=True)
@@ -318,6 +345,25 @@ def main():
     print(f"✔ Saved final model to {final_path}")
     # Usage
     upload_blob("tacodataset", "/workspace/data/outputs/best_model.pth", "checkpoints/best_model.pth")
+
+    # ─── Save TorchScript Version (.pt) ───
+    print("⚙️ Converting to TorchScript...")
+    scripted_model_path = os.path.join(args.output_dir, "best_model_scripted.pt")
+
+    model_cpu = get_model(num_classes)
+    model_cpu.load_state_dict(torch.load(final_path, map_location="cpu"))
+    model_cpu.eval()
+
+    wrapper = JITWrapper(model_cpu)
+    wrapper.eval()
+
+    scripted = torch.jit.script(wrapper)
+    scripted = torch.jit.freeze(scripted)
+    torch.jit.save(scripted, scripted_model_path)
+    print(f"✅ Saved TorchScript model to {scripted_model_path}")
+
+    # Upload .pt as well
+    upload_blob("tacodataset", scripted_model_path, "checkpoints/best_model_scripted.pt")
 
 if __name__ == "__main__":
     main()
