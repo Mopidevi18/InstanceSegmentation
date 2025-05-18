@@ -106,8 +106,8 @@ app.secret_key = os.environ.get("FLASK_SECRET","change-me")
 result_cache = {}
 
 # At app startup
-# download_model("tacodataset", "checkpoints/best_model.pth", "model/best_model.pth")
-# download_model("tacodataset","checkpoints/best_model_scripted.pt", "model/best_model_scripted.pt")
+download_model("tacodataset", "checkpoints/best_model.pth", "model/best_model.pth")
+download_model("tacodataset","checkpoints/best_model_scripted.pt", "model/best_model_scripted.pt")
 
 # ─── Load models once ───────────────────────────────────────────────────────
 
