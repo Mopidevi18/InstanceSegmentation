@@ -131,8 +131,8 @@ The evaluation was conducted using a 0.5 IoU threshold, which provided the most 
 Below are sample visualizations of model input and output:
 
 <p align="center">
-  <img src="assets/result_1.png" alt="Segmentation Result 1" width="45%" />
-  <img src="assets/result_2.png" alt="Segmentation Result 2" width="45%" />
+  <img src="assets/test_results/result_1.png" alt="Segmentation Result 1" width="45%" />
+  <img src="assets/test_results/result_2.png" alt="Segmentation Result 2" width="45%" />
 </p>
 
 ---
