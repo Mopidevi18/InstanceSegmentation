@@ -1,4 +1,6 @@
 
+[Cloud WebApp Link](https://segwaste-webapp-977013514282.us-central1.run.app/)
+
 # Instance Segmentation for Waste Classification
 
 This project implements a fine-tuned Mask R-CNN model with a ResNet-50 backbone for instance segmentation, tailored for real-world waste classification. Leveraging the TACO (Trash Annotations in Context) dataset—which provides annotations for over 59 distinct waste-related categories—the model is trained and optimized to detect and segment various types of waste under diverse environmental conditions. The project encompasses complete data preprocessing, training with fine-tuned hyperparameters, thorough evaluation using segmentation metrics, and a production-ready MLOps pipeline with a real-time web application for interactive inference.
