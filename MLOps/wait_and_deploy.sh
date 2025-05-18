@@ -32,8 +32,8 @@ done
 # Proceed to deploy webapp
 echo "Deploying webapp to Cloud Run..."
 gcloud run deploy segwaste-webapp \
-  --image "us-central1-docker.pkg.dev/instancesegmentation-456922/segwaste-webapp/segwaste" \
-  --region "$REGION" \
-  --platform managed \
-  --memory 2Gi \
-  --allow-unauthenticated
+   --image us-central1-docker.pkg.dev/instancesegmentation-456922/segwaste-webapp/segwaste \
+   --region "$REGION" \
+   --platform managed \
+   --memory=8Gi --cpu 2 \
+   --allow-unauthenticated
