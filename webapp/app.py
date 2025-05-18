@@ -64,6 +64,12 @@ def generate_vis_bytes(pil_img, outputs, category_map,
     ax.imshow(blended)
 
     any_pred=False
+    if max(w, h) > 1000:
+        fontsize = max(20, min(36, w // 30))   # for high-res image
+        print(max(w,h))
+    else:
+        fontsize = max(8, min(20, w // 50))   # for resized 640x640
+
     for box,lab,scr in zip(boxes,labels,scores):
         if scr<score_thresh: continue
         any_pred=True
@@ -77,12 +83,12 @@ def generate_vis_bytes(pil_img, outputs, category_map,
         est_w = len(txt)*10
         label_x = x1 if x1+est_w<w else w-est_w-5
         ax.text(label_x, label_y, txt,
-                color="yellow", fontsize=max(12,min(12,w//25)),
+                color="yellow", fontsize = fontsize,
                 backgroundcolor="black", alpha=0.8, weight="bold", clip_on=True)
 
     if not any_pred:
         ax.text(w//2,h//2,"⚠️ No predictions above threshold",
-                color="red", fontsize=max(12,min(12,w//25)),
+                color="red", fontsize = fontsize,
                 ha="center",va="center", backgroundcolor="white",
                 alpha=0.9,weight="bold")
 
@@ -140,12 +146,18 @@ def index():
         raw = f.read()
         mime_type = f.mimetype
         img = Image.open(io.BytesIO(raw)).convert("RGB")
-        if max(img.size) / min(img.size) > 1.5:
-            img = ImageOps.pad(img, (640, 640), method=Image.BICUBIC, color=(0, 0, 0))
-        else:
-            img = ImageOps.fit(img, (640, 640), method=Image.BICUBIC)
 
-        img_t = to_tensor(img)
+        if choice == "pth":
+            img_input = img.copy()
+            img_t = to_tensor(img_input)
+        else:
+            if max(img.size) / min(img.size) > 1.5:
+                img_resized = ImageOps.pad(img, (640, 640), method=Image.BICUBIC, color=(0, 0, 0))
+            else:
+                img_resized = ImageOps.fit(img, (640, 640), method=Image.BICUBIC)
+            img_input = img_resized
+            img_t = to_tensor(img_resized)
+
         t0 = time.time()
         with torch.no_grad():
             if choice == "pth":
@@ -155,14 +167,12 @@ def index():
                 out = {"boxes": b, "labels": l, "scores": s, "masks": m}
         latency = (time.time() - t0) * 1000
 
-        # Encode images as base64 URIs
         buf1 = io.BytesIO()
-        img.save(buf1, format="PNG")
+        img_input.save(buf1, format="PNG")
         orig_uri = f"data:image/png;base64,{base64.b64encode(buf1.getvalue()).decode()}"
-        buf2 = generate_vis_bytes(img, out, category_map)
+        buf2 = generate_vis_bytes(img_input, out, category_map)
         pred_uri = f"data:image/png;base64,{base64.b64encode(buf2).decode()}"
 
-        # Store result in memory by UUID
         uid = uuid.uuid4().hex
         result_cache[uid] = {
             "orig_image": orig_uri,
@@ -173,7 +183,6 @@ def index():
 
         return redirect(url_for("index", id=uid))
 
-    # GET
     uid = request.args.get("id")
     data = result_cache.pop(uid, {}) if uid in result_cache else {}
     return render_template("index.html",
