@@ -1,4 +1,4 @@
-timeout: 9000s
+timeout: 1100s
 
 logsBucket: gs://cloud-build-logs-segwaste
 
