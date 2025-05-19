@@ -19,10 +19,10 @@ echo "Waiting for training job to complete..."
 while true; do
   STATUS=$(gcloud ai custom-jobs describe "$JOB_ID" --region="$REGION" --format="value(state)")
   echo "  ➤ Current status: $STATUS"
-  if [[ "$STATUS" == "SUCCEEDED" ]]; then
+  if [[ "$STATUS" == "JOB_STATE_SUCCEEDED" ]]; then
     echo "Training job succeeded!"
     break
-  elif [[ "$STATUS" == "FAILED" || "$STATUS" == "CANCELLED" ]]; then
+  elif [[ "$STATUS" == "JOB_STATE_FAILED" || "$STATUS" == "JOB_STATE_CANCELLED" ]]; then
     echo "Training job failed or cancelled!"
     exit 1
   fi
