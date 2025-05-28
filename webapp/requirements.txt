@@ -3,9 +3,10 @@ Flask-Session
 torch>=2.0
 torchvision>=0.15
 Pillow
-google-cloud-storage
 numpy
 matplotlib
 opencv-python-headless
 albumentations
 gunicorn
+google-cloud-storage>=2.0.0
+google-auth>=2.0.0

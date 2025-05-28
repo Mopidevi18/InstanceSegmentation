@@ -87,7 +87,7 @@
     </div>
 
     {% if latency %}
-    <div class="text-center my-4">
+    <div class="text-center my-4" id="inference-result">
       <div class="badge bg-primary fs-5 px-4 py-2">
         <i class="bi bi-speedometer2 me-2"></i>
         Inference Time: <strong>{{ (latency / 1000)|round(2) }} s</strong>

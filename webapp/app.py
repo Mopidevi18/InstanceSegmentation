@@ -12,6 +12,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from google.auth import default
+from google.auth import impersonated_credentials
 
 import torch
 from PIL import ImageOps, Image 
@@ -21,7 +23,7 @@ from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
 from flask import Flask, request, render_template, redirect, url_for
 
-# ─── Helpers ──────────────────────────────────────────────────────────────
+# ─── Helpers ───
 
 def get_model(num_classes, weights_path):
     model = maskrcnn_resnet50_fpn(pretrained=False)
@@ -65,10 +67,9 @@ def generate_vis_bytes(pil_img, outputs, category_map,
 
     any_pred=False
     if max(w, h) > 1000:
-        fontsize = max(20, min(36, w // 30))   # for high-res image
-        print(max(w,h))
+        fontsize = min(64, max(36, w // 30))
     else:
-        fontsize = max(8, min(20, w // 50))   # for resized 640x640
+        fontsize = max(8, min(20, w // 50))
 
     for box,lab,scr in zip(boxes,labels,scores):
         if scr<score_thresh: continue
@@ -93,9 +94,19 @@ def generate_vis_bytes(pil_img, outputs, category_map,
                 alpha=0.9,weight="bold")
 
     buf = io.BytesIO()
-    fig.savefig(buf,format="png",bbox_inches=None,pad_inches=0)
+    # Step 1: Save figure as PNG to a temporary buffer
+    buf_png = io.BytesIO()
+    fig.savefig(buf_png, format="png", bbox_inches=None, pad_inches=0)
     plt.close(fig)
-    return buf.getvalue()
+
+    # Step 2: Convert to JPEG using Pillow
+    buf_png.seek(0)
+    img = Image.open(buf_png).convert("RGB")  # Ensure no alpha
+    buf_jpeg = io.BytesIO()
+    img.save(buf_jpeg, format="JPEG", quality=85)
+
+    return buf_jpeg.getvalue()
+
 
 def download_model(bucket_name, blob_name, local_path):
     os.makedirs(os.path.dirname(local_path), exist_ok=True)
@@ -104,36 +115,47 @@ def download_model(bucket_name, blob_name, local_path):
     blob = bucket.blob(blob_name)
     blob.download_to_filename(local_path)
 
-# ─── Flask setup ──────────────────────────────────────────────────────────
+def upload_to_bucket(bucket_name, blob_name, data):
+    # Get default credentials and impersonate the service account
+    source_credentials, _ = default()
+
+    target_service_account = "segwaste-mlops@instancesegmentation-456922.iam.gserviceaccount.com"
+    target_credentials = impersonated_credentials.Credentials(
+        source_credentials=source_credentials,
+        target_principal=target_service_account,
+        target_scopes=["https://www.googleapis.com/auth/devstorage.read_write"],
+        lifetime=300
+    )
+
+    client = storage.Client(credentials=target_credentials)
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+    blob.upload_from_string(data, content_type="image/jpeg")
+
+    return blob.generate_signed_url(
+        version="v4",
+        expiration=3600,
+        method="GET",
+        credentials=target_credentials
+    )
+
+# ─── Flask setup ───
 
 app = Flask(__name__, template_folder="templates")
 app.secret_key = os.environ.get("FLASK_SECRET","change-me")
-# Store results temporarily in memory for redirect
 result_cache = {}
 
-# At app startup
 download_model("tacodataset", "checkpoints/best_model.pth", "model/best_model.pth")
 download_model("tacodataset","checkpoints/best_model_scripted.pt", "model/best_model_scripted.pt")
-
-# ─── Load models once ───────────────────────────────────────────────────────
 
 WEIGHTS_PATH    = "model/best_model.pth"
 QUANTIZED_PATH  = "model/best_model_scripted.pt"
 ANN_PATH        = "data/annotations_train.json"
 
 category_map    = load_category_map(ANN_PATH)
-
-
-# Raw .pth
 raw_model       = get_model(len(category_map)+1, WEIGHTS_PATH)
-
-# INT8‐quantized TorchScript
 quant_model     = torch.jit.load(QUANTIZED_PATH, map_location="cpu")
 quant_model.eval()
-
-
-
-# ─── Routes ────────────────────────────────────────────────────────────────
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -167,13 +189,15 @@ def index():
                 out = {"boxes": b, "labels": l, "scores": s, "masks": m}
         latency = (time.time() - t0) * 1000
 
-        buf1 = io.BytesIO()
-        img_input.save(buf1, format="PNG")
-        orig_uri = f"data:image/png;base64,{base64.b64encode(buf1.getvalue()).decode()}"
-        buf2 = generate_vis_bytes(img_input, out, category_map)
-        pred_uri = f"data:image/png;base64,{base64.b64encode(buf2).decode()}"
-
+        # Upload images to GCS
+        pred_buf = generate_vis_bytes(img_input, out, category_map)
         uid = uuid.uuid4().hex
+        pred_uri = upload_to_bucket("tacodataset", f"results/{uid}_pred.jpg", pred_buf)
+
+        orig_buf = io.BytesIO()
+        img_input.save(orig_buf, format="JPEG", quality=85)
+        orig_uri = upload_to_bucket("tacodataset", f"results/{uid}_orig.jpg", orig_buf.getvalue())
+
         result_cache[uid] = {
             "orig_image": orig_uri,
             "pred_image": pred_uri,
@@ -181,7 +205,7 @@ def index():
             "choice": choice
         }
 
-        return redirect(url_for("index", id=uid))
+        return redirect(url_for("index", id=uid) + "#inference-result")
 
     uid = request.args.get("id")
     data = result_cache.pop(uid, {}) if uid in result_cache else {}
@@ -190,7 +214,6 @@ def index():
                            pred_image=data.get("pred_image"),
                            latency=data.get("latency"),
                            choice=data.get("choice", "pth"))
-
 
 if __name__=="__main__":
     app.run(debug=True)
